@@ -375,7 +375,7 @@ function va_save_mannschaft_meta($post_id)
             'va_team_typ', 'va_team_nummer',
             'va_trainer', 'va_liga', 'va_heimstaette', 'va_training_zeiten',
             'va_kontakt_email', 'va_tabellen_platz', 'va_bilanz',
-            'va_link_tabelle', 'va_link_spielplan', 'va_link_ticker',
+            'va_link_tabelle', 'va_link_spielplan', 'va_link_ticker', 'va_link_instagram',
     ];
     foreach ($fields as $key) {
         if (isset($_POST[$key])) {
