@@ -1,0 +1,11 @@
+/* ── FOOTER ── */
+#site-footer {
+    background: var(--blue); color: rgba(255,255,255,0.7);
+    padding: 40px 80px;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+}
+.footer-logo-text { font-family: 'Familjen Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: var(--white); }
+.footer-logo-sub { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { font-size: 13px; color: rgba(255,255,255,0.5); text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: var(--white); }

@@ -1,0 +1,25 @@
+/* ── HEADER ── */
+#site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 64px;
+    box-shadow: 0 1px 12px rgba(13,59,110,0.06);
+}
+
+.site-branding { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+
+.site-logo-mark {
+    width: 36px; height: 36px; border-radius: 6px;
+    background: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Familjen Grotesk', sans-serif;
+    font-weight: 700; font-size: 14px; color: var(--white);
+}
+
+.site-name {
+    font-family: 'Familjen Grotesk', sans-serif;
+    font-weight: 600; font-size: 16px; color: var(--blue); line-height: 1.2;
+}
+.site-tagline { font-size: 11px; font-weight: 400; color: var(--text-muted); }

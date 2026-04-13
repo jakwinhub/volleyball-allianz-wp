@@ -1,0 +1,92 @@
+/* ── HEADER MENU ── */
+/* Grundmenü */
+#primary-menu {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+}
+
+#primary-menu a {
+    font-family: 'Familjen Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+
+#primary-menu a:hover,
+#primary-menu .current-menu-item > a {
+    color: var(--blue);
+    background: var(--blue-pale);
+}
+
+#menu-toggle {
+    display: none;
+}
+
+/* CTA-Button */
+.nav-cta {
+    background: var(--blue);
+    color: var(--white);
+    font-family: 'Familjen Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+}
+
+.nav-cta:hover { background: var(--blue-mid); transform: translateY(-1px); }
+
+/* Dropdowns */
+#primary-menu li {
+    position: relative;
+}
+
+#primary-menu .sub-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    min-width: 180px;
+    z-index: 999;
+}
+
+#primary-menu .sub-menu li a {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: #333;
+    white-space: nowrap;
+}
+
+#primary-menu li.menu-item-has-children:hover > .sub-menu {
+    display: block;
+}
+
+#primary-menu li.menu-item-has-children > a::after {
+    content: ' ▼';
+    font-size: 0.6em;
+    margin-left: 0.2em;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    #menu-toggle {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        margin-left: auto;
+    }
+}

@@ -1,0 +1,24 @@
+.section-header {
+    padding: 56px 80px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; justify-content: space-between;
+}
+.section-tag {
+    font-family: 'Familjen Grotesk', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--blue-mid);
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+}
+.section-tag::before { content: ''; width: 16px; height: 2px; background: var(--accent); display: inline-block; }
+.section-h2 {
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 700; color: var(--blue);
+}
+.section-link {
+    font-family: 'Familjen Grotesk', sans-serif;
+    font-size: 14px; font-weight: 500; color: var(--blue-mid);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+.section-link:hover { color: var(--blue); }
