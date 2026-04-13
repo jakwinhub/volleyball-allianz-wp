@@ -126,6 +126,7 @@ get_header();
                 'va_link_tabelle' => __('Tabelle', 'volleyball-allianz'),
                 'va_link_spielplan' => __('Gesamtspielplan', 'volleyball-allianz'),
                 'va_link_ticker' => __('Live-Ticker', 'volleyball-allianz'),
+                'va_link_instagram' => __('Instagram', 'volleyball-allianz'),
             ];
             $has_links = false;
             foreach ($links as $key => $_) {
