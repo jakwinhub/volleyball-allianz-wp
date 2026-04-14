@@ -404,96 +404,71 @@ function va_register_sidebars()
 
 add_action('widgets_init', 'va_register_sidebars');
 
+
 /* ─────────────────────────────────────────────
    8. CSV-SPIELPLAN-AUSLESEN
 ───────────────────────────────────────────── */
-/**
- * Liest alle zukünftigen Spiele eines Teams aus einer CSV-Datei.
- * Erwartet: /data/spielplan_{team_slug}.csv
- *
- * @param string $team_slug Slug des Teams, z. B. 'damen-1'
- * @return array              Sortierte Liste zukünftiger Spiele
- */
-function va_get_team_games_from_csv($team_slug)
+function va_get_team_games($team_id)
 {
-    $csv_filename = 'spielplan_' . $team_slug . '.csv';
-    $csv_path = get_template_directory() . '/data/' . $csv_filename;
+    $heute = date('Y-m-d H:i:s');
 
-    $spiele = [];
-    $heute = strtotime('today');
+    $spiele = get_posts([
+            'post_type' => 'spiel',
+            'numberposts' => -1,
+            'meta_query' => [
+                    [
+                            'key' => 'va_team_id',
+                            'value' => $team_id
+                    ],
+                    [
+                            'key' => 'va_datum',
+                            'value' => $heute,
+                            'compare' => '>=',
+                            'type' => 'DATETIME'
+                    ]
+            ],
+            'orderby' => 'meta_value',
+            'meta_key' => 'va_datum',
+            'order' => 'ASC'
+    ]);
 
-    if (!file_exists($csv_path)) return [];
+    $result = [];
 
-    if (($handle = fopen($csv_path, "r")) !== FALSE) {
+    foreach ($spiele as $spiel) {
 
-        fgetcsv($handle, 1000, ";");
+        $datum_raw = get_post_meta($spiel->ID, 'va_datum', true);
+        $timestamp = strtotime($datum_raw);
 
-        while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
-
-            $data = array_map(function ($value) {
-                return mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
-            }, $data);
-
-            if (empty($data[0])) continue;
-            $spiel_zeitpunkt = strtotime($data[0]);
-
-            if ($spiel_zeitpunkt < $heute) continue;
-
-            $m1 = $data[4];
-            $m2 = $data[6];
-
-            $is_home = (
-                    strpos($m1, 'GA Stuttgart') !== false ||
-                    strpos($m1, 'G.A. Stuttgart') !== false
-            );
-
-            $spiele[] = [
-                    'timestamp' => $spiel_zeitpunkt,
-                    'datum' => date_i18n('D, d.m.', $spiel_zeitpunkt),
-                    'uhrzeit' => date('H:i', $spiel_zeitpunkt),
-                    'gegner' => $is_home ? $m2 : $m1,
-                    'ort' => str_replace(' (70565 Stuttgart (Vaihingen))', '', $data[13]),
-                    'heimspiel' => $is_home
-            ];
-        }
-
-        fclose($handle);
+        $result[] = [
+                'timestamp' => $timestamp,
+                'datum' => date_i18n('D, d.m.', $timestamp),
+                'uhrzeit' => date('H:i', $timestamp),
+                'gegner' => get_post_meta($spiel->ID, 'va_gegner', true),
+                'ort' => get_post_meta($spiel->ID, 'va_ort', true),
+                'heimspiel' => ((int)get_post_meta($spiel->ID, 'va_heimspiel', true) === 1),];
     }
 
-    usort($spiele, function ($a, $b) {
+    return $result;
+}
+
+function va_get_next_home_game($team_id)
+{
+    $spiele = va_get_team_games($team_id);
+
+    $heimspiele = array_filter($spiele, function ($spiel) {
+        return $spiel['heimspiel'] === true;
+    });
+
+    usort($heimspiele, function ($a, $b) {
         return $a['timestamp'] <=> $b['timestamp'];
     });
 
-    return $spiele;
-}
-
-/**
- * Gibt das nächste Heimspiel eines Teams zurück.
- *
- * @param string $team_slug Slug des Teams
- * @return array|null             Spiel-Array oder null, wenn keines gefunden
- */
-function va_get_next_home_game_from_csv($team_slug)
-{
-    $spiele = va_get_team_games_from_csv($team_slug);
-
-    foreach ($spiele as $spiel) {
-        if ($spiel['heimspiel']) {
-            return $spiel;
-        }
-    }
-
-    return null;
+    return $heimspiele[0] ?? null;
 }
 
 /* ─────────────────────────────────────────────
-   9. CSV-Import für Spieler / Kader
+   9. CSV-Import für Kader und Spielplan
 ───────────────────────────────────────────── */
-
-/**
- * Importiert oder aktualisiert Spieler aus CSV.
- * Fügt Default-Bild hinzu, falls kein Thumbnail existiert.
- */
 function va_import_kader_csv_file(int $team_id, string $file_path, bool $update_only = false): string
 {
     if (!file_exists($file_path)) {
@@ -605,6 +580,149 @@ function va_import_kader_csv_file(int $team_id, string $file_path, bool $update_
     return "Import abgeschlossen: $imported Spieler für Team-ID $team_id";
 }
 
+/**
+ * Importiert den aktuellen Spielplan aus einem .csv file.
+ *
+ * @param int $team_id
+ * @param string $file_path
+ * @param bool $update_only
+ * @return string
+ */
+function va_import_spielplan_csv_file(int $team_id, string $file_path, bool $update_only = false): string
+{
+    if (!$update_only) {
+
+        $old_games = get_posts([
+                'post_type' => 'spiel',
+                'numberposts' => -1,
+                'meta_query' => [
+                        [
+                                'key' => 'va_team_id',
+                                'value' => $team_id
+                        ]
+                ]
+        ]);
+
+        foreach ($old_games as $game) {
+            wp_delete_post($game->ID, true);
+        }
+    }
+
+    if (!file_exists($file_path)) {
+        return "Datei nicht gefunden: $file_path";
+    }
+
+    $handle = fopen($file_path, 'r');
+
+    if (!$handle) {
+        return "Konnte Datei nicht öffnen";
+    }
+
+    error_log('CSV FILE OPENED: ' . $file_path);
+
+    // Header überspringen
+    fgetcsv($handle, 1000, ';');
+
+    $imported = 0;
+
+    while (($data = fgetcsv($handle, 1000, ';')) !== false) {
+
+        // Encoding fix
+        $data = array_map(function ($value) {
+            return mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
+        }, $data);
+
+        // CSV Felder
+        $datetime_raw = $data[0] ?? '';
+        $m1 = $data[4] ?? '';
+        $m2 = $data[6] ?? '';
+        $ort = $data[13] ?? '';
+
+        if (empty($datetime_raw) || empty($m1) || empty($m2)) {
+            continue;
+        }
+
+        // Heim/Auswärts Logik
+        $is_home = (
+                strpos($m1, 'GA Stuttgart') !== false ||
+                strpos($m1, 'G.A. Stuttgart') !== false
+        );
+
+        $gegner = $is_home ? $m2 : $m1;
+
+        // Datum parsen
+        $timestamp = strtotime(str_replace('.', '-', $datetime_raw));
+
+        if (!$timestamp) {
+            continue;
+        }
+
+        $datum_db = date('Y-m-d H:i:s', $timestamp);
+        $uhrzeit = date('H:i', $timestamp);
+
+        $post_title = date('d.m.Y H:i', $timestamp) . ' vs ' . $gegner;
+
+        // Existierendes Spiel suchen
+        $existing = get_posts([
+                'post_type' => 'spiel',
+                'numberposts' => 1,
+                'meta_query' => [
+                        [
+                                'key' => 'va_team_id',
+                                'value' => $team_id
+                        ]
+                ],
+                's' => $post_title
+        ]);
+
+        if ($existing) {
+            $spiel_id = $existing[0]->ID;
+        } else {
+
+            $mode = $_POST['update_mode'] ?? 0;
+
+            $spiel_id = wp_insert_post([
+                    'post_type' => 'spiel',
+                    'post_title' => $post_title,
+                    'post_status' => 'publish',
+            ]);
+
+            if (is_wp_error($spiel_id) || !$spiel_id) {
+                continue;
+            }
+
+            update_post_meta($spiel_id, 'va_team_id', $team_id);
+        }
+
+        // Meta speichern
+        update_post_meta($spiel_id, 'va_datum', $datum_db);
+        update_post_meta($spiel_id, 'va_timestamp', $timestamp);
+        update_post_meta($spiel_id, 'va_gegner', $gegner);
+        update_post_meta($spiel_id, 'va_ort', $ort);
+        update_post_meta($spiel_id, 'va_uhrzeit', $uhrzeit);
+        update_post_meta($spiel_id, 'va_heimspiel', $is_home ? 1 : 0);
+
+        $imported++;
+    }
+
+    fclose($handle);
+
+    return "Import abgeschlossen: $imported Spiele für Team-ID $team_id";
+}
+
+function va_delete_team_games($team_id)
+{
+    $games = get_posts([
+            'post_type' => 'spiel',
+            'numberposts' => -1,
+            'meta_key' => 'va_team_id',
+            'meta_value' => $team_id
+    ]);
+
+    foreach ($games as $game) {
+        wp_delete_post($game->ID, true);
+    }
+}
 
 /* ─────────────────────────────────────────────
    10. HELPER-FUNKTIONEN
@@ -701,18 +819,100 @@ function va_kader_import_page()
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['team_id']) && !empty($_FILES['kader_csv'])) {
         $team_id = intval($_POST['team_id']);
         $file = $_FILES['kader_csv'];
-        $update_mode = !empty($_POST['update_mode']) && $_POST['update_mode'] === '1';
-
-        $tmp_path = $file['tmp_name'];
-
-        if (file_exists($tmp_path)) {
-            $result = va_import_kader_csv_file($team_id, $tmp_path, $update_mode);
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($result) . '</p></div>';
-        } else {
-            echo '<div class="notice notice-error is-dismissible"><p>Datei konnte nicht gelesen werden.</p></div>';
-        }
+        handleFileUpload($file['tmp_name'], $team_id, 'kader');
     }
 }
+
+/* ─────────────────────────────────────────────
+   11. Admin-Seite: Spielplan importieren / aktualisieren
+───────────────────────────────────────────── */
+function va_spielplan_import_page()
+{
+    ?>
+    <div class="wrap">
+        <h1>Spielplan importieren / aktualisieren</h1>
+        <form method="post" enctype="multipart/form-data">
+            <table class="form-table">
+                <tr>
+                    <th scope="row"><label for="team_id">Team auswählen</label></th>
+                    <td>
+                        <select name="team_id" id="team_id" required>
+                            <option value="">-- wählen --</option>
+                            <?php
+                            $teams = get_posts([
+                                    'post_type' => 'mannschaft',
+                                    'numberposts' => -1,
+                                    'orderby' => 'title',
+                                    'order' => 'ASC'
+                            ]);
+                            foreach ($teams as $team) {
+                                echo '<option value="' . esc_attr($team->ID) . '">' . esc_html($team->post_title) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="spielplan_csv">CSV-Datei hochladen</label></th>
+                    <td><input type="file" name="spielplan_csv" id="spielplan_csv" accept=".csv" required></td>
+                </tr>
+                <tr>
+                    <th scope="row">Modus</th>
+                    <td>
+                        <label><input type="radio" name="update_mode" value="0" checked> Neuer Import
+                        </label><br>
+                        <label><input type="radio" name="update_mode" value="1"> Update
+                        </label><br>
+                        <label><input type="radio" name="update_mode" value="2"> Delete
+                        </label>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button('Import starten'); ?>
+        </form>
+    </div>
+    <?php
+
+    // Verarbeitung beim Absenden
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['team_id']) && !empty($_FILES['spielplan_csv'])) {
+        $team_id = intval($_POST['team_id'] ?? 0);
+        $file = $_FILES['spielplan_csv'];
+        handleFileUpload($file['tmp_name'], $team_id, 'spielplan');
+    }
+}
+
+/**
+ * @param $tmp_name
+ * @param int $team_id
+ * @return void
+ */
+function handleFileUpload($tmp_name, int $team_id, string $type)
+{
+    $update_mode = !empty($_POST['update_mode']) && $_POST['update_mode'] === '1';
+
+    if (!file_exists($tmp_name)) {
+        echo '<div class="notice notice-error is-dismissible"><p>Datei konnte nicht gelesen werden.</p></div>';
+        return;
+    }
+
+    switch ($type) {
+
+        case 'kader':
+            $result = va_import_kader_csv_file($team_id, $tmp_name, $update_mode);
+            break;
+
+        case 'spielplan':
+            $result = va_import_spielplan_csv_file($team_id, $tmp_name, $update_mode);
+            break;
+
+        default:
+            $result = 'Unbekannter Import-Typ';
+            break;
+    }
+
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($result) . '</p></div>';
+}
+
 
 /* ─────────────────────────────────────────────
    12. Admin-Menü hinzufügen
@@ -725,5 +925,13 @@ add_action('admin_menu', function () {
             'manage_options',                // Capability
             'va_kader_import',               // Slug
             'va_kader_import_page'           // Callback
+    );
+    add_submenu_page(
+            'edit.php?post_type=spiel',    // Unter Menü von Spiele
+            'Spielplan importieren',        // Seitentitel
+            'Spielplan importieren',        // Menü-Titel
+            'manage_options',               // Capability
+            'va_spielplan_import',          // Slug
+            'va_spielplan_import_page'      // Callback
     );
 });

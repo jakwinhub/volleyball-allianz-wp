@@ -2,14 +2,11 @@
 /**
  * Template Part: Nächste Spiele (Sidebar)
  */
+$team_post = get_post(get_the_ID());
+$team_id = $team_post->ID;
 
-// Slug der aktuellen Mannschaft (z.B. damen-1)
-$team_slug = get_post_field( 'post_name', get_the_ID() );
+$spiele = va_get_team_games($team_id);
 
-// 👉 NEU: Spiele über zentrale Funktion holen
-$spiele = va_get_team_games_from_csv($team_slug);
-
-// Wenn keine Spiele → nichts anzeigen
 if ( empty( $spiele ) ) return;
 ?>
 
