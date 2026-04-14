@@ -3,22 +3,31 @@
  * Template Part: Nächste Spiele – Frontpage-Sektion (CSV basiert)
  */
 
-// 👉 Reihenfolge fest definieren
-$teams = [
-    'damen-1',
-    'herren-1',
-    'damen-2',
-    'herren-2',
-];
+$teams = get_posts([
+        'post_type' => 'mannschaft',
+        'numberposts' => -1,
+        'orderby' => 'title',
+        'order' => 'ASC'
+]);
 
-// 👉 Spiele sammeln (je Team genau 1 Heimspiel)
 $spiele = [];
 
-foreach ($teams as $team) {
-    $spiel = va_get_next_home_game_from_csv($team);
+foreach ($teams as $team_post) {
+
+    $all = va_get_team_games($team_post->ID);
+
+    $heimspiele = array_filter($all, function ($s) {
+        return !empty($s['heimspiel']);
+    });
+
+    usort($heimspiele, function ($a, $b) {
+        return $a['timestamp'] <=> $b['timestamp'];
+    });
+
+    $spiel = $heimspiele[0] ?? null;
 
     if ($spiel) {
-        $spiel['team'] = $team;
+        $spiel['team'] = $team_post->post_title;
         $spiele[] = $spiel;
     }
 }
@@ -68,7 +77,7 @@ foreach ($teams as $team) {
             <?php endforeach; ?>
 
         <?php else : ?>
-            <p>Keine kommenden Heimspiele gefunden.</p>
+            <p>Es stehen aktuell keine Heimspiele an.</p>
         <?php endif; ?>
 
     </div>

@@ -40,10 +40,10 @@ get_header();
         <div class="team-page-meta">
             <?php
             $meta_felder = [
-                'va_trainer' => __('Cheftrainer', 'volleyball-allianz'),
-                'va_heimstaette' => __('Heimspielstätte', 'volleyball-allianz'),
-                'va_training_zeiten' => __('Training', 'volleyball-allianz'),
-                'va_kontakt_email' => __('Kontakt', 'volleyball-allianz'),
+                    'va_trainer' => __('Cheftrainer', 'volleyball-allianz'),
+                    'va_heimstaette' => __('Heimspielstätte', 'volleyball-allianz'),
+                    'va_training_zeiten' => __('Training', 'volleyball-allianz'),
+                    'va_kontakt_email' => __('Kontakt', 'volleyball-allianz'),
             ];
             foreach ($meta_felder as $key => $label) :
                 $value = va_meta($key);
@@ -123,10 +123,10 @@ get_header();
             <!-- External links -->
             <?php
             $links = [
-                'va_link_tabelle' => __('Tabelle', 'volleyball-allianz'),
-                'va_link_spielplan' => __('Gesamtspielplan', 'volleyball-allianz'),
-                'va_link_ticker' => __('Live-Ticker', 'volleyball-allianz'),
-                'va_link_instagram' => __('Instagram', 'volleyball-allianz'),
+                    'va_link_tabelle' => __('Tabelle', 'volleyball-allianz'),
+                    'va_link_spielplan' => __('Gesamtspielplan', 'volleyball-allianz'),
+                    'va_link_ticker' => __('Live-Ticker', 'volleyball-allianz'),
+                    'va_link_instagram' => __('Instagram', 'volleyball-allianz')
             ];
             $has_links = false;
             foreach ($links as $key => $_) {
